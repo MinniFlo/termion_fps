@@ -56,6 +56,7 @@ fn calc_render_map(game: &mut GameState) {
         if max_dist_reached {
             game.render_vec[i as usize] = vec!(' '; game.render_win.size.1 as usize);
         } else {
+            // changes display-char for walls in relation to the distance
             match () {
                 _ if distance <= game.render_dist as f32 * 0.15 => display_char = '\u{2588}',
                 _ if distance <= game.render_dist as f32 * 0.35 => display_char = '\u{2593}',
@@ -63,11 +64,14 @@ fn calc_render_map(game: &mut GameState) {
                 _ => display_char = '\u{2591}'
             }
 
+            // calculate wall height
             let mut wall_height = calc_wall_height(distance, game.render_win.size.1, game.render_dist, 0.15);
 
+            // calculate the number of cells that is not wall
             let screen_remainder = game.render_win.size.1 - wall_height as u16;
             let floor_size = screen_remainder / 2;
 
+            // puts vec's together
             if screen_remainder % 2 == 0 {
                 let mut sky_floor_vec = vec!(' '; (screen_remainder / 2) as usize);
                 game.render_vec[i as usize] = sky_floor_vec.clone();
@@ -81,18 +85,19 @@ fn calc_render_map(game: &mut GameState) {
             }
         }
     }
+
+    // is needed because most left vector's are build at first
     game.render_vec.reverse()
 }
 
+// linear function witch calculates the wall-size in relation to the distance
 fn calc_wall_height(distance: f32, win_size: u16, render_dist: u32, min_height: f32) -> u32 {
     (-((win_size as f32 - win_size as f32 * min_height) / render_dist as f32) * distance + win_size as f32) as u32
 }
 
 fn main() {
 
-
-
-
+    // logic setup
     let mut player = Player{koordinates: (1.0, 13.5), angel: 350.0, fov: 50};
     let map_win = Window{size: (15, 15), start: (0, 3)};
     let render_win = Window{size: (350, 120), start: (33, 3)};
@@ -126,31 +131,24 @@ fn main() {
 
 
 
-    calc_render_map(&mut game);
 
-
+    // termion setup
     let mut stdin = async_stdin().bytes();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    // setup
-    write!(stdout, "{}{}{}",
-           clear::All,
-           cursor::Goto(1, 1),
-           cursor::Hide
-    ).unwrap();
-    stdout.flush().unwrap();
-
     write!(stdout, "{}{}",
            clear::All,
-           cursor::Goto(1, 1));
+           cursor::Hide
+    ).unwrap();
 
-
-    write!(stdout, "{}{}", clear::All, cursor::Goto(1,1)).unwrap();
+    // prints player-information
+    write!(stdout, "{}", cursor::Goto(1,1)).unwrap();
     write!(stdout, "x: {} | y: {} | angel: {}\n",
            game.player.koordinates.0,
            game.player.koordinates.1,
            game.player.angel).unwrap();
 
+    // prints map
     for field_y in 0..game.map_win.size.1 {
         for field_x in 0..game.map_win.size.0 {
             write!(stdout ,"{}", cursor::Goto((field_x + game.map_win.start.0) * 2, field_y + game.map_win.start.1)).unwrap();
@@ -161,9 +159,10 @@ fn main() {
             write!(stdout, "{}\n", game.map_vec[field_y as usize][field_x as usize]).unwrap();
         }
     }
-
+    // builds the view
     calc_render_map(&mut game);
 
+    // prints view
     for field_x in (0..game.render_win.size.0) {
         for field_y in 0..game.render_win.size.1 {
             write!(stdout ,"{}", cursor::Goto(field_x + game.render_win.start.0, field_y + game.render_win.start.1)).unwrap();
@@ -171,6 +170,7 @@ fn main() {
         }
     }
 
+    // update terminal
     stdout.flush().unwrap();
 
 //    let mut timer = 100;
