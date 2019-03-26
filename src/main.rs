@@ -86,7 +86,6 @@ fn calc_render_map(game: &mut GameState) -> String {
                 the_vec.append(&mut vec!(' '; floor_num));
             }
             
-
             for chr in the_vec {
                 final_str.push(chr);
                 final_str.push_str("\n\x1B[1D");
@@ -134,112 +133,95 @@ fn main() {
                             render_win,
                             map_vec, 
                             render_vec,
-                            render_dist: 10 };
-
-
-
+                            render_dist: 15 };
 
     // termion setup
     let mut stdin = async_stdin().bytes();
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    let stdout = stdout();
+    let mut stdout = stdout.lock().into_raw_mode().unwrap();
 
     write!(stdout, "{}{}",
            clear::All,
            cursor::Hide
     ).unwrap();
 
-    // prints player-information
-    write!(stdout, "{}", cursor::Goto(1,1)).unwrap();
-    write!(stdout, "x: {} | y: {} | angel: {}\n",
-           game.player.koordinates.0,
-           game.player.koordinates.1,
-           game.player.angel).unwrap();
+    // first instant to set frame rate
+    let mut start_stemp = Instant::now();
 
-    // prints map
-    for field_y in 0..game.map_win.size.1 {
-        for field_x in 0..game.map_win.size.0 {
-            write!(stdout ,"{}", cursor::Goto((field_x + game.map_win.start.0) * 2, field_y + game.map_win.start.1)).unwrap();
-            if field_x == game.player.koordinates.0 as u16 && field_y == game.player.koordinates.1 as u16 {
-                write!(stdout, "{}\n", '*').unwrap();
-                continue
+    // flag that prevents pointless rendering
+    let mut render_pls = true;
+
+    // main loop
+    loop {
+        // puts next char from input buffer in to c
+        let c = stdin.next();
+
+        // binds player coordinates to vars for better readability
+        let (x, y) = game.player.koordinates;
+
+        // evaluates input
+        match c {
+            Some(Ok(b'q')) => break,
+            Some(Ok(b'w')) => {
+                let (step_x, step_y) = step_calculation(0.25, game.player.angel);
+                if game.map_vec[(y - step_y) as usize][(x + step_x) as usize] != '#' {
+                    game.player.koordinates = (x + step_x, y - step_y);
+                    render_pls = true;
+                }
+            },
+            Some(Ok(b's')) => {
+                let (step_x, step_y) = step_calculation(-0.25, game.player.angel);
+                if game.map_vec[(y - step_y) as usize][(x + step_x) as usize] != '#' {
+                    game.player.koordinates = (x + step_x, y - step_y);
+                    render_pls = true;
+                }
+            },
+            Some(Ok(b'a')) => {game.player.angel = (game.player.angel + 2.0) % 360.0;
+                                render_pls = true;},
+            Some(Ok(b'd')) => {game.player.angel = (game.player.angel + 360.0 - 2.0) % 360.0;
+                                render_pls = true;},
+            _ => {},
+        }
+
+        // creates new Image
+        let the_str = calc_render_map(&mut game);
+
+        // takes current Instant to set frame rate
+        let now = Instant::now();
+
+        // sets frame rate to 1 pic per 17 ms
+        if now.duration_since(start_stemp).as_millis() >= 17 && render_pls{
+
+            // set up
+            write!(stdout, "{}{}", clear::All, cursor::Goto(1, 1)).unwrap();
+
+            // player informations
+            write!(stdout, "x: {} | y: {} | angel: {}\n",
+                   game.player.koordinates.0,
+                   game.player.koordinates.1,
+                   game.player.angel).unwrap();
+
+            // map
+            for field_y in 0..game.map_win.size.1 {
+                for field_x in 0..game.map_win.size.0 {
+                    write!(stdout, "{}", cursor::Goto((field_x + game.map_win.start.0) * 2, field_y + game.map_win.start.1)).unwrap();
+                    if field_x == x as u16 && field_y == y as u16 {
+                        write!(stdout, "{}\n", '*').unwrap();
+                        continue
+                    }
+                    write!(stdout, "{}\n", game.map_vec[field_y as usize][field_x as usize]).unwrap();
+                }
             }
-            write!(stdout, "{}\n", game.map_vec[field_y as usize][field_x as usize]).unwrap();
+
+            // view
+            write!(stdout, "{}", the_str).unwrap();
+
+            stdout.flush().unwrap();
+
+            // resets time stemp
+            start_stemp = Instant::now();
+            render_pls = false;
         }
     }
-    // builds the view
-    calc_render_map(&mut game);
-
-    // prints view
-    for field_x in (0..game.render_win.size.0) {
-        for field_y in 0..game.render_win.size.1 {
-            write!(stdout ,"{}", cursor::Goto(field_x + game.render_win.start.0, field_y + game.render_win.start.1)).unwrap();
-            write!(stdout, "{}", game.render_vec[field_x as usize][field_y as usize]).unwrap();
-        }
-    }
-
-    // update terminal
-    stdout.flush().unwrap();
-
-//    let mut timer = 100;
-//
-//    loop {
-//        let c = stdin.next();
-//
-//        let (x, y) = game.player.koordinates;
-//
-//        match c {
-//            Some(Ok(b'q')) => break,
-//            Some(Ok(b'w')) => {let (step_x, step_y) = step_calculation(0.25, game.player.angel);
-//                                if game.map_vec[(y - step_y) as usize][(x + step_x) as usize] != '#' {
-//                                    game.player.koordinates = (x + step_x, y - step_y);
-//                                }},
-//            Some(Ok(b's')) => {let (step_x, step_y) = step_calculation(-0.25, game.player.angel);
-//                                if game.map_vec[(y - step_y) as usize][(x + step_x) as usize] != '#' {
-//                                    game.player.koordinates = (x + step_x, y - step_y);
-//                                }},
-//            Some(Ok(b'a')) => game.player.angel = (game.player.angel + 10.0) % 360.0,
-//            Some(Ok(b'd')) => game.player.angel = (game.player.angel + 360.0 -10.0) % 360.0,
-//            None => {},
-//            _ => {},
-//        }
-//
-//        if timer == 50 {
-//            calc_render_map(&mut game);
-//
-//            for field_y in 0..game.render_win.size.0 {
-//                for field_x in 0..game.render_win.size.1 {
-//                    write!(stdout ,"{}", cursor::Goto((field_x + game.render_win.start.0), field_y + game.render_win.start.1)).unwrap();
-//                    write!(stdout, "{}\n", game.render_vec[field_y as usize][field_x as usize]).unwrap();
-//                }
-//            }
-//
-//            stdout.flush().unwrap();
-//        }
-//
-//        if timer == 100 {
-//            write!(stdout, "{}{}", clear::All, cursor::Goto(1,1)).unwrap();
-//            write!(stdout, "x: {} | y: {} | angel: {}\n",
-//                   game.player.koordinates.0,
-//                   game.player.koordinates.1,
-//                   game.player.angel).unwrap();
-//
-//            for field_y in 0..game.map_win.size.1 {
-//                for field_x in 0..game.map_win.size.0 {
-//                    write!(stdout ,"{}", cursor::Goto((field_x + game.map_win.start.0) * 2, field_y + game.map_win.start.1)).unwrap();
-//                    if field_x == x as u16 && field_y == y as u16 {
-//                        write!(stdout, "{}\n", '*').unwrap();
-//                        continue
-//                    }
-//                    write!(stdout, "{}\n", game.map_vec[field_y as usize][field_x as usize]).unwrap();
-//                }
-//            }
-//
-//            stdout.flush().unwrap();
-//            timer = 0;
-//        }
-//        timer += 1;
-//
-//        thread::sleep(Duration::from_millis(1));
-//    }
     write!(stdout, "{}", cursor::Show).unwrap();
 }
