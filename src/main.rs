@@ -19,16 +19,17 @@ struct Player {koordinates: (f32, f32), angel: f32, fov: u16}
 
 struct Window {size: (u16, u16), start: (u16, u16)}
 
-
 fn step_calculation(step: f32, angel: f32) -> (f32, f32) {
     let x_pos = angel.to_radians().cos() * step;
     let y_pos = angel.to_radians().sin() * step;
     (x_pos, y_pos)
 }
 
-fn calc_render_map(game: &mut GameState) {
+fn calc_render_map(game: &mut GameState) -> String {
     let start_angel : f32 = (game.player.angel + (360 - game.player.fov / 2) as f32) % 360.0; // start of the players fov
     let step_size : f32 = game.player.fov as f32 / game.render_win.size.0 as f32; // amount by witch the start_angel is increased
+    let mut final_str = String::new();
+
 
     for i in 0..game.render_win.size.0 { // iterates over each part of the fov
         let mut distance : f32 = 0.0; // travled distance
@@ -70,24 +71,30 @@ fn calc_render_map(game: &mut GameState) {
             // calculate the number of cells that is not wall
             let screen_remainder = game.render_win.size.1 - wall_height as u16;
             let floor_size = screen_remainder / 2;
+            let mut the_vec = Vec::new();
 
             // puts vec's together
             if screen_remainder % 2 == 0 {
                 let mut sky_floor_vec = vec!(' '; (screen_remainder / 2) as usize);
-                game.render_vec[i as usize] = sky_floor_vec.clone();
-                game.render_vec[i as usize].append(&mut vec!(display_char; (wall_height) as usize));
-                game.render_vec[i as usize].append( &mut sky_floor_vec);
+                the_vec = sky_floor_vec.clone();
+                the_vec.append(&mut vec!(display_char; (wall_height) as usize));
+                the_vec.append( &mut sky_floor_vec);
             } else {
                 let floor_num = (screen_remainder / 2) as usize;
-                game.render_vec[i as usize] = vec!(' '; floor_num + 1);
-                game.render_vec[i as usize].append(&mut vec!(display_char; (wall_height) as usize));
-                game.render_vec[i as usize].append(&mut vec!(' '; floor_num));
+                the_vec = vec!(' '; floor_num + 1);
+                the_vec.append(&mut vec!(display_char; (wall_height) as usize));
+                the_vec.append(&mut vec!(' '; floor_num));
             }
+            
+
+            for chr in the_vec {
+                final_str.push(chr);
+                final_str.push_str("\n\x1B[1D");
+            }
+            final_str.push_str("\x1B[1C\x1B[120A");
         }
     }
-
-    // is needed because most left vector's are build at first
-    game.render_vec.reverse()
+    return final_str;
 }
 
 // linear function witch calculates the wall-size in relation to the distance
@@ -99,7 +106,7 @@ fn main() {
 
     // logic setup
     let mut player = Player{koordinates: (1.0, 13.5), angel: 350.0, fov: 50};
-    let map_win = Window{size: (15, 15), start: (0, 3)};
+    let map_win = Window{size: (15, 15), start: (0, 7)};
     let render_win = Window{size: (350, 120), start: (33, 3)};
                                     //   0    1    2    3    4    5    6    7    8    9    0    1    2    3    4
     let map_vec = vec!(vec!('#', ' ', ' ', ' ', ' ', '#', ' ', ' ', '#', '#', '#', '#', '#', '#', '#'),
