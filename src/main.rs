@@ -4,7 +4,7 @@ use termion::raw::IntoRawMode;
 use std::io::{Write, Read, stdout};
 use termion::{cursor, clear, async_stdin};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 struct GameState {
     player: Player,
