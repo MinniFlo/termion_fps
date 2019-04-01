@@ -26,16 +26,17 @@ fn step_calculation(step: f32, angel: f32) -> (f32, f32) {
 }
 
 fn calc_render_map(game: &mut GameState) -> String {
-    let start_angel : f32 = (game.player.angel + (360 - game.player.fov / 2) as f32) % 360.0; // start of the players fov
+    let start_angel : f32 = (game.player.angel + game.player.fov as f32 / 2.0) % 360.0; // start of the players fov
     let step_size : f32 = game.player.fov as f32 / game.render_win.size.0 as f32; // amount by witch the start_angel is increased
     let mut final_str = String::new();
 
 
     for i in 0..game.render_win.size.0 { // iterates over each part of the fov
+        let cur_angel : f32 = start_angel + 360.0 - i as f32 * step_size % 360.0;
         let mut distance : f32 = 0.0; // travled distance
         let (mut dist_x, mut dist_y) = game.player.koordinates; // coordinates of distant point
         let mut hit_char : char = ' '; // char of point (dist_x, dist_y)
-        let (step_x, step_y) = step_calculation(0.1, (start_angel + i as f32 * step_size % 360.0)); // unit vector for the ray-trace steps
+        let (step_x, step_y) = step_calculation(0.1, (cur_angel)); // unit vector for the ray-trace steps
         let mut max_dist_reached = false; // flag for the next loop
         let mut display_char = ' ';
 
