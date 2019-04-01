@@ -54,6 +54,9 @@ fn calc_render_map(game: &mut GameState) -> String {
             hit_char = game.map_vec[dist_y as usize][dist_x as usize]; // sets new char
 
         }
+
+//         distance = flatter(distance, &game.player, cur_angel);
+
         // build vertical Vectors
         if max_dist_reached {
             game.render_vec[i as usize] = vec!(' '; game.render_win.size.1 as usize);
@@ -100,6 +103,10 @@ fn calc_render_map(game: &mut GameState) -> String {
 // linear function witch calculates the wall-size in relation to the distance
 fn calc_wall_height(distance: f32, win_size: u16, render_dist: u32, min_height: f32) -> u32 {
     (-((win_size as f32 - win_size as f32 * min_height) / render_dist as f32) * distance + win_size as f32) as u32
+}
+
+fn flatter(distance: f32, player: &Player, cur_angel: f32) -> f32 {
+    ((cur_angel - player.angel as f32 + 90.0).to_radians().sin() * distance).abs()
 }
 
 fn main() {
